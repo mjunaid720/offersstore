@@ -10,20 +10,18 @@ namespace App\Http\Controllers\API;
 
 use Illuminate\Http\Request;
 use App\Http\Controllers\API\BaseController as BaseController;
-use Illuminate\Support\Facades\Auth;
 use Validator;
 use Crypt;
-//use App\Repositories\Offer\Offeraccess;
-use App\Repositories\Bookmark\Bookmarkaccess;
+use App\Repositories\Bookmark\BookmarkInterface;
 
 class BookmarkController extends BaseController {
 
-    private $bookmarkobj;
+    private $bookmarkRepo;
     private $request;
 
-    public function __construct(Request $request) {
+    public function __construct(Request $request, BookmarkInterface $bookmarkRepository) {
 
-        $this->bookmarkobj = new Bookmarkaccess();
+        $this->bookmarkRepo = $bookmarkRepository;
         $this->request = $request;
     }
 
@@ -35,7 +33,7 @@ class BookmarkController extends BaseController {
             return $this->sendError('Validation Error.', $validator->errors());
         }
         $input = $this->request->all();
-        $response = $this->bookmarkobj->saveBookmark($input);
+        $response = $this->bookmarkRepo->saveBookmark($input);
         if (!empty($response)) {
             return $this->sendResponse('success', $response);
         } else {
@@ -44,7 +42,7 @@ class BookmarkController extends BaseController {
     }
 
     public function getUserBookmarks() {
-        $response = $this->bookmarkobj->userBookmarks();
+        $response = $this->bookmarkRepo->userBookmarks();
         if (!empty($response)) {
             return $this->sendResponse('success', $response);
         } else {
@@ -60,7 +58,7 @@ class BookmarkController extends BaseController {
             return $this->sendError('Validation Error.', $validator->errors());
         }
         $input = $this->request->all();
-        $response = $this->bookmarkobj->delBookmark($input);
+        $response = $this->bookmarkRepo->delBookmark($input);
         if ($response == true) {
             return $this->sendResponse('success', "offer un bookmark successfully");
         } else {

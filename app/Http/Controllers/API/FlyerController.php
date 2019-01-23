@@ -10,20 +10,22 @@ namespace App\Http\Controllers\API;
 
 use Illuminate\Http\Request;
 use App\Http\Controllers\API\BaseController as BaseController;
-use Illuminate\Support\Facades\Auth;
 use Validator;
 use Crypt;
-use App\Repositories\Flyer\Flyeraccess;
+use App\Repositories\Flyer\FlyerInterface;
+use App\Repositories\Offers\OffersInterface;
 use File;
 
 class FlyerController extends BaseController {
 
-    private $flyerobj;
+    private $flyerRepo;
+    private $offerRepo;
     private $request;
 
-    public function __construct(Request $request) {
+    public function __construct(Request $request, FlyerInterface $flyerRepository, OffersInterface $offerRepository) {
 
-        $this->flyerobj = new Flyeraccess();
+        $this->flyerRepo = $flyerRepository;
+        $this->offerRepo = $offerRepository;
         $this->request = $request;
     }
 
@@ -35,16 +37,16 @@ class FlyerController extends BaseController {
         if ($validator->fails()) {
             return $this->sendError('Validation Error.', $validator->errors());
         }
-        $input = $this->request->request->all();
+        $input = $this->request->all();
         $data['flyer_title'] = $input['flyer_title'];
         if ($this->request->hasFile('flyer_image')) {
             $flyerImage = $this->request->file('flyer_image');
 
             //  $destinationPath = public_path() . '/uploads/flyer';
-//                $imageName = $this->offerobj->imagesUpload($offerImage, $destinationPath);
+//                $imageName = $this->offerRepo->imagesUpload($offerImage, $destinationPath);
             $data['flyer_image'] = $flyerImage;
         }
-        $response = $this->flyerobj->saveFlyer($data);
+        $response = $this->flyerRepo->saveFlyer($data);
         if ($response == true) {
             return $this->sendResponse('success', 'Flyer created successfully.');
         } else {
@@ -53,7 +55,7 @@ class FlyerController extends BaseController {
     }
 
     public function getAllFlyers() {
-        $response = $this->flyerobj->getFlyers();
+        $response = $this->flyerRepo->getFlyers();
         if(!empty($response)){
              return $this->sendResponse('success', $response);
         } else {
@@ -78,7 +80,7 @@ class FlyerController extends BaseController {
             $primaryImage = $this->request->file('primary_image');
             if (!empty($primaryImage)) {
                 $destinationPath = public_path() . '/uploads/offerprimaryimage';
-                $imageName = $this->offerobj->imagesUpload($primaryImage, $destinationPath);
+                $imageName = $this->offerRepo->imagesUpload($primaryImage, $destinationPath);
                 $input['primary_image'] = $imageName;
             }
         }
@@ -86,7 +88,7 @@ class FlyerController extends BaseController {
             $secondaryImages = $this->request->file('secondary_images');
             $input['secondary_images'] = $secondaryImages;
         }
-        $response = $this->offerobj->updateOffer($input);
+        $response = $this->offerRepo->updateOffer($input);
         if ($response == true) {
             return $this->sendResponse('success', "offer updated successfully");
         } else {
@@ -95,7 +97,7 @@ class FlyerController extends BaseController {
     }
 
     public function getOfferById($offerId) {
-        $response = $this->offerobj->offerById($offerId);
+        $response = $this->offerRepo->offerById($offerId);
         if (!empty($response)) {
             return $this->sendResponse('success', $response);
         } else if (empty($response)) {
@@ -106,7 +108,7 @@ class FlyerController extends BaseController {
     }
 
     public function getAllOffers() {
-        $response = $this->offerobj->allOffers();
+        $response = $this->offerRepo->allOffers();
         if (!empty($response)) {
             return $this->sendResponse('success', $response);
         } else if (empty($response)) {
@@ -117,7 +119,7 @@ class FlyerController extends BaseController {
     }
 
     public function getTrendOffers() {
-        $response = $this->offerobj->allTrendingOffers();
+        $response = $this->offerRepo->allTrendingOffers();
         if (!empty($response)) {
             return $this->sendResponse('success', $response);
         } else if (empty($response)) {
@@ -136,12 +138,12 @@ class FlyerController extends BaseController {
             return $this->sendError('Validation Error.', $validator->errors());
         }
         $storeId = $this->request->input('store_id');
-        $response = $this->offerobj->storeOffers($storeId);
+        $response = $this->offerRepo->storeOffers($storeId);
         return $this->sendResponse('success', $response);
     }
 
     public function getAllCategories() {
-        $categories = $this->offerobj->getCategories();
+        $categories = $this->offerRepo->getCategories();
         if (!empty($categories)) {
             return $this->sendResponse('success', $categories);
         } else {
@@ -150,7 +152,7 @@ class FlyerController extends BaseController {
     }
 
     public function getHomeCategories() {
-        $categories = $this->offerobj->homeCategories();
+        $categories = $this->offerRepo->homeCategories();
         if (!empty($categories)) {
             return $this->sendResponse('success', $categories);
         } else {
@@ -159,7 +161,7 @@ class FlyerController extends BaseController {
     }
 
     public function getChildCategories($parentId = '') {
-        $categories = $this->offerobj->getCategories($parentId);
+        $categories = $this->offerRepo->getCategories($parentId);
         if (!empty($categories)) {
             return $this->sendResponse('success', $categories);
         } else {
@@ -175,7 +177,7 @@ class FlyerController extends BaseController {
             return $this->sendError('Validation Error.', $validator->errors());
         }
         $catId = $this->request->input('cat_id');
-        $response = $this->offerobj->productsByCatId($catId);
+        $response = $this->offerRepo->productsByCatId($catId);
         return $this->sendResponse('success', $response);
     }
 
@@ -187,7 +189,7 @@ class FlyerController extends BaseController {
             return $this->sendError('Validation Error.', $validator->errors());
         }
         $offerId = $this->request->input('offer_id');
-        $response = $this->offerobj->deleteOffers($offerId);
+        $response = $this->offerRepo->deleteOffers($offerId);
         if ($response == true) {
             return $this->sendResponse('success', 'offer deleted successfully.');
         } else {
@@ -196,7 +198,7 @@ class FlyerController extends BaseController {
     }
 
     public function getTotaloffers($id) {
-        $parntid = $this->offerobj->countTotaloffers($id);
+        $parntid = $this->offerRepo->countTotaloffers($id);
         print_r($parntid);
     }
 
@@ -209,7 +211,7 @@ class FlyerController extends BaseController {
             return $this->sendError('Validation Error.', $validator->errors());
         }
         $offerId = $this->request->input('offer_id');
-        $reponse = $this->offerobj->offerDetail($offerId);
+        $reponse = $this->offerRepo->offerDetail($offerId);
         if (!empty($reponse)) {
             return $this->sendResponse('success', $reponse);
         } else {

@@ -10,21 +10,19 @@ namespace App\Http\Controllers\API;
 
 use Illuminate\Http\Request;
 use App\Http\Controllers\API\BaseController as BaseController;
-use Illuminate\Support\Facades\Auth;
 use Validator;
 use Crypt;
-use App\Repositories\Store\Storeaccess;
+use App\Repositories\Store\StoreInterface;
 use File;
 use Log;
 
 class StoreController extends BaseController {
 
-    private $storeobj;
+    private $storeRepo;
     private $request;
 
-    public function __construct(Request $request) {
-
-        $this->storeobj = new Storeaccess();
+    public function __construct(Request $request, StoreInterface $storeRepository) {
+        $this->storeRepo = $storeRepository;
         $this->request = $request;
     }
 
@@ -50,12 +48,12 @@ class StoreController extends BaseController {
         if ($this->request->hasFile('store_logo')) {
             $imageObj = $this->request->file('store_logo');
             if (!empty($imageObj)) {
-                $imageName = $this->storeobj->logoUpload($imageObj);
+                $imageName = $this->storeRepo->logoUpload($imageObj);
             }
             $input['store_logo'] = $imageName;
         }
 
-        $response = $this->storeobj->saveStore($input);
+        $response = $this->storeRepo->saveStore($input);
         if ($response == true) {
             return $this->sendResponse('success', 'Store created successfully.');
         } else {
@@ -64,7 +62,7 @@ class StoreController extends BaseController {
     }
 
     public function getStores() {
-        $response = $this->storeobj->getAllStores();
+        $response = $this->storeRepo->getAllStores();
         if (!empty($response)) {
             return $this->sendResponse('success', $response);
         } else {
@@ -80,7 +78,7 @@ class StoreController extends BaseController {
             return $this->sendError('Validation Error.', $validator->errors());
         }
         $storeId = $this->request->input('store_id');
-        $response = $this->storeobj->StoreDataById($storeId);
+        $response = $this->storeRepo->StoreDataById($storeId);
         if (!empty($response)) {
             return $this->sendResponse('success', $response);
         } else {
@@ -108,11 +106,11 @@ class StoreController extends BaseController {
         if ($this->request->hasFile('store_logo') && $this->request->file('store_logo') != '') {
             $imageObj = $this->request->file('store_logo');
             if (isset($imageObj) && $imageObj != "") {
-                $imageName = $this->storeobj->logoUpload($imageObj);
+                $imageName = $this->storeRepo->logoUpload($imageObj);
             }
             $input['store_logo'] = $imageName;
         }
-        $response = $this->storeobj->updateStore($input);
+        $response = $this->storeRepo->updateStore($input);
         if (!empty($response)) {
             return $this->sendResponse('success', "store updated successfully");
         } else {
@@ -148,13 +146,12 @@ class StoreController extends BaseController {
             return $this->sendError('Validation Error.', $validator->errors());
         }
         $input = $this->request->input();
-        $response = $this->storeobj->delStore($input);
+        $response = $this->storeRepo->delStore($input);
         if ($response == true) {
             return $this->sendResponse('success', 'store deleted successfully');
         } else {
             return $this->sendError('error', 'Some thing went wrong.');
         }
-//        }
     }
 
 }
